@@ -20,6 +20,23 @@ from Crypto.Cipher import AES
 
 DEFAULT_FILE_EXTENSION = '.enc'
 
+class FilePair(object):
+  def __init__(self, in_file, out_file):
+    self.in_file = in_file
+    self.out_file = out_file
+
+  def absolutize(self, basedir):
+    return FilePair(os.path.abspath(os.path.join(basedir, self.in_file)),
+                    os.path.abspath(os.path.join(basedir, self.out_file)))
+
+  def in_exist(self):
+    return os.path.isfile(self.in_file)
+
+  def create_out_dir(self):
+    if not os.path.exists(os.path.dirname(self.out_file)):
+      os.makedirs(os.path.dirname(self.out_file))
+    
+
 #################################################
 # code related to encrypting was borrowerd from
 # http://eli.thegreenplace.net/2010/06/25/aes-encryption-of-files-in-python-with-pycrypto/
@@ -69,32 +86,49 @@ def decrypt_file(in_filename, password,
                 outfile.write(decryptor.decrypt(chunk))
             outfile.truncate(origsize)
 
-def encrypt_files(filenames, password):
-  logger.info("Going to ecrypt {} files".format(len(filenames)))
-  for filename in filenames:
-    if os.path.isfile(filename): 
-      logger.info("Will encrypt file: '{}'".format(filename))
-      encrypt_file(filename, password)      
+def encrypt_files(file_pairs, password):
+  logger.info("Going to ecrypt {} files".format(len(file_pairs)))
+  for file_pair in file_pairs:
+    if file_pair.in_exist():
+      logger.info("Will encrypt file: '{}'".format(file_pair.in_file))
+      file_pair.create_out_dir()
+      encrypt_file(file_pair.in_file, password, file_pair.out_file)      
     else:
-      logger.warning('File {} does not exist'.format(filename))
+      logger.warning('File {} does not exist'.format(file_pair.in_file))
 
-def decrypt_files(filenames, password):
-  logger.info("Going to decrypt {} files".format(len(filenames)))
-  for filename in filenames:
-    if not filename.endswith(DEFAULT_FILE_EXTENSION):
-      filename += DEFAULT_FILE_EXTENSION
-    if os.path.isfile(filename): 
-      logger.info("Will decrypt file: '{}'".format(filename))
-      decrypt_file(filename, password)      
+def decrypt_files(file_pairs, password):
+  logger.info("Going to decrypt {} files".format(len(file_pairs)))
+  for file_pair in file_pairs:
+    if file_pair.in_exist():
+      logger.info("Will decrypt file: '{}'".format(file_pair.in_file))
+      file_pair.create_out_dir()
+      decrypt_file(file_pair.in_file, password, file_pair.out_file)      
     else:
-      logger.warning('File {} does not exist'.format(filename))
+      logger.warning('File {} does not exist'.format(file_pair.in_file))
 
-def files_from_list(file_list):
-  names = file_list.read().splitlines()
-  filtered_names = [name.strip() for name in names if name.strip() != '']
+def file_pairs_from_list(file_list, encode):
+  lines = file_list.read().splitlines()
+  filtered_lines = [line.strip().split('\t') for line in lines if line.strip() != '']
+  if encode:
+    file_pairs = [FilePair(l[0], l[1]) for l in filtered_lines if len(l) == 2 and l[0] != '' and l[1] != '']
+  else:
+    file_pairs = [FilePair(l[1], l[0]) for l in filtered_lines if len(l) == 2 and l[0] != '' and l[1] != '']
   basepath = os.path.dirname(file_list.name)
-  abs_names = [os.path.join(basepath, name) for name in filtered_names]
-  return abs_names
+  abs_pairs = [pair.absolutize(basepath) for pair in file_pairs]
+  return abs_pairs
+
+def file_pairs_from_names(file_names, encrypt):
+  if encode:
+    return [FilePair(name, name + DEFAULT_FILE_EXTENSION) for name in file_names]
+  else:
+    result = []
+    for name in file_names:
+      index = name.index(DEFAULT_FILE_EXTENSION)
+      if index == -1:
+        logger.warning('Not processing file {} because it does not have the right extension "{}"'.format(name, DEFAULT_FILE_EXTENSION))
+      else:
+        result.append(FilePair(name[:index], name))
+    return result
 
 ################################
 # command line parsing
@@ -126,8 +160,8 @@ def cli(log):
                 type=click.Path(exists=True, resolve_path=False))
 def encrypt(password, file_list, files):
   validate_options(files, file_list)
-  files = files if files else files_from_list(file_list)
-  encrypt_files(files, password)
+  file_pairs = file_pairs_from_names(files, True) if files else file_pairs_from_list(file_list, True)
+  encrypt_files(file_pairs, password)
  
 #DECRYPT
 @click.command(help='Decrypt any number of files')
@@ -139,8 +173,8 @@ def encrypt(password, file_list, files):
                 type=click.Path(exists=True, resolve_path=False))
 def decrypt(password, file_list, files):
   validate_options(files, file_list)
-  files = files if files else files_from_list(file_list)
-  decrypt_files(files, password)
+  file_pairs = file_pairs_from_names(files, False) if files else file_pairs_from_list(file_list, False)
+  decrypt_files(file_pairs, password)
 
 # putting arguments together    
 cli.add_command(encrypt)
