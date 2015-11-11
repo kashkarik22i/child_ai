@@ -18,6 +18,7 @@ cipher decrypt -p <password> -l encrypted_files.list
 
 If you need to commit more encrypted data, add the data to the list and run
 ```
+source .venv/bin/activate
 cipher encrypt -p <password> -l encrypted_files.list
 ```
 
