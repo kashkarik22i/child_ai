@@ -1,6 +1,9 @@
 # virtual environmet
 .venv*
 
+# data that need encryption to commit
+data/raw
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

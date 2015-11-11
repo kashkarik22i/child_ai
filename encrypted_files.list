@@ -1,0 +1,10 @@
+data/raw/misk/counts	data/encrypted/misk/counts.enc
+data/raw/misk/counts.filtered	data/encrypted/misk/counts.filtered.enc
+
+data/raw/original/sample_submission.csv	data/encrypted/original/sample_submission.csv.enc
+data/raw/original/training_set.tsv	data/encrypted/original/training_set.tsv.enc
+data/raw/original/validation_set.tsv	data/encrypted/original/validation_set.tsv.enc
+
+data/raw/resources/saar_g_distance/RTE5_NGD.txt	data/encrypted/resources/saar_g_distance/RTE5_NGD.txt.enc
+
+data/raw/sumissions/sample_submission.csv	data/encrypted/sumissions/sample_submission.csv.enc
